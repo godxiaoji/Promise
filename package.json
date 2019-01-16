@@ -1,5 +1,5 @@
 {
-  "name": "PromiseJS",
+  "name": "promise-browser",
   "version": "1.0.0",
   "description": "Promise for browser",
   "main": "src/promise.js",

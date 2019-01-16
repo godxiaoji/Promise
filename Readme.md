@@ -1,11 +1,11 @@
-# PromiseJS
+# promise-browser
 
 Promise for browser.
 
 ## Install
 
 ```bash
-npm install PromiseJS
+npm install promise-browser
 ```
 
 ### Documentation
