@@ -1,9 +1,13 @@
-# Promise.js
+# PromiseJS
+
+Promise for browser.
+
+## Install
+
+```bash
+npm install PromiseJS
+```
 
 ### Documentation
 
-[API](http://www.ituring.com.cn/article/66566)
-
-### Author
-
-[Travis](http://travisup.com/)
+[SEE](http://www.ituring.com.cn/article/66566)

@@ -1,13 +1,27 @@
 /**
- * Promise.js
- * @Author  Travis
- * @Contact http://travisup.com/
- * @Version 0.0.1
- * @document: http://www.ituring.com.cn/article/66566
-              https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all
+ * Promise for browser
+ * @Author  Travis [godxiaoji@gmail.com]
+ * @version 1.0.0
+ * 
+ * @see http://www.ituring.com.cn/article/66566
+ * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all
  */
 
-(function() {
+// Module definition pattern used is returnExports from https://github.com/umdjs/umd
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define([], factory);
+    } else if (typeof module === 'object' && module.exports) {
+        // Node. Does not work with strict CommonJS, but
+        // only CommonJS-like environments that support module.exports,
+        // like Node.
+        module.exports = factory();
+    } else {
+        // Browser globals (root is window)
+        root.EventEmitter = factory();
+    }
+}(typeof self !== 'undefined' ? self : this, (function () {
     'use strict';
 
     function isThenable(obj) {
@@ -22,7 +36,7 @@
         FULFILLED = 1,
         REJECTED = 2;
 
-    var Promise = function(resolver) {
+    var Promise = function (resolver) {
         var self = this;
         this._status = PENDING;
         this._value;
@@ -30,14 +44,14 @@
         this._resolves = [];
         this._rejects = [];
 
-        var resolve = function(value) {
+        var resolve = function (value) {
             self._status = FULFILLED;
             self._value = value;
             for (var i = 0; i < self._resolves.length; i++) {
                 self._resolves[i](self._value);
             }
         };
-        var reject = function(reason) {
+        var reject = function (reason) {
             self._status = REJECTED;
             self._reason = reason;
             for (var i = 0; i < self._rejects.length; i++) {
@@ -48,20 +62,20 @@
         resolver(resolve, reject);
     };
 
-    Promise.resolve = function(value) {
-        return new Promise(function(resolve, reject) {
+    Promise.resolve = function (value) {
+        return new Promise(function (resolve, reject) {
             resolve(value);
         });
     };
 
-    Promise.reject = function(reason) {
-        return new Promise(function(resolve, reject) {
+    Promise.reject = function (reason) {
+        return new Promise(function (resolve, reject) {
             reject(reason);
         });
     };
 
-    Promise.all = function(promises) {
-        return new Promise(function(resolve, reject) {
+    Promise.all = function (promises) {
+        return new Promise(function (resolve, reject) {
             var values = [],
                 i = 0,
                 j = 0,
@@ -69,12 +83,12 @@
                 p;
 
             function then(p, i) {
-                p.then(function(value) {
+                p.then(function (value) {
                     values[i] = value;
                     if (++j >= len) {
                         resolve(values);
                     }
-                }, function(reason) {
+                }, function (reason) {
                     reject(reason);
                 });
             }
@@ -93,8 +107,8 @@
         });
     };
 
-    Promise.race = function(promises) {
-        return new Promise(function(resolve, reject) {
+    Promise.race = function (promises) {
+        return new Promise(function (resolve, reject) {
             var values = [],
                 i = 0,
                 sign = 0,
@@ -104,12 +118,12 @@
             for (; i < len; i++) {
                 p = promises[i];
                 if (p instanceof Promise) {
-                    p.then(function(value) {
+                    p.then(function (value) {
                         if (!sign) {
                             sign = 1;
                             resolve(value);
                         }
-                    }, function(reason) {
+                    }, function (reason) {
                         if (!sign) {
                             sign = 1;
                             reject(reason);
@@ -126,25 +140,25 @@
     };
 
     Promise.prototype = {
-        then: function(onFulfilled, onRejected) {
+        then: function (onFulfilled, onRejected) {
             var self = this;
 
-            return new Promise(function(resolve, reject) {
+            return new Promise(function (resolve, reject) {
                 function callback(value) {
                     var ret = value;
-                    if(isFunction(onFulfilled)) {
+                    if (isFunction(onFulfilled)) {
                         try {
                             // 成功函数执行报错，也会载入catch中
                             ret = onFulfilled(value);
-                        } catch(e) {
+                        } catch (e) {
                             reject(e);
                             return;
                         }
                     }
                     if (isThenable(ret)) {
-                        ret.then(function(value) {
+                        ret.then(function (value) {
                             resolve(value);
-                        }, function(reason) {
+                        }, function (reason) {
                             reject(reason);
                         });
                     } else {
@@ -168,10 +182,10 @@
             });
 
         },
-        'catch': function(fn) {
+        'catch': function (fn) {
             return this.then(null, fn);
         }
     };
 
-    window.Promise = Promise;
-})();
+    return Promise;
+})));

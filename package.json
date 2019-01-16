@@ -1,0 +1,28 @@
+{
+  "name": "PromiseJS",
+  "version": "1.0.0",
+  "description": "Promise for browser",
+  "main": "src/promise.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/godxiaoji/Promise.git"
+  },
+  "keywords": [
+    "promise",
+    "es6",
+    "then"
+  ],
+  "author": "Travis",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/godxiaoji/Promise/issues"
+  },
+  "homepage": "https://github.com/godxiaoji/Promise#readme",
+  "devDependencies": {
+    "gulp": "^4.0.0",
+    "gulp-uglify": "^3.0.1"
+  }
+}
