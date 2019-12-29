@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Event Loop调整，本文档需在es6+环境中验证</title>
+</head>
+
+<body>
+  <script src="../src/promise.js"></script>
+  <script>
+    console.log('start')
+
+    requestAnimationFrame(function () {
+      // 帧刚好到了，可能会比setTimeout快
+      console.log('requestAnimationFrame')
+    })
+
+    requestIdleCallback(function () {
+      console.log('requestIdleCallback')
+    })
+
+    setTimeout(function () {
+      console.log('setTimeout')
+    })
+
+    new Promise((resolve, reject) => {
+      console.log('Promise')
+      resolve(0)
+
+    }).then(function (res) {
+      console.log(res)
+      return 1
+    }).finally(() => {
+      console.log('finally')
+    })
+
+    new PromiseBrowser((resolve, reject) => {
+      console.log('promise1')
+      resolve('promise1')
+    }).finally(() => {
+      console.log('finally1')
+      return 'finally1'
+    }).then(res => {
+      console.log(res + 'then1')
+    })
+
+
+    console.log('end')
+  </script>
+</body>
+
+</html>

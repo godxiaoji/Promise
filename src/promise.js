@@ -1,7 +1,7 @@
 /**
  * Promise for browser
  * @Author  Travis [godxiaoji@gmail.com]
- * @version 1.0.0
+ * @version 1.0.2
  * 
  * @see http://www.ituring.com.cn/article/66566
  * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all
@@ -19,7 +19,10 @@
         module.exports = factory();
     } else {
         // Browser globals (root is window)
-        root.EventEmitter = factory();
+        if (!root.Promise) {
+            root.Promise = factory();
+        }
+        root.PromiseBrowser = factory();
     }
 }(typeof self !== 'undefined' ? self : this, (function () {
     'use strict';
@@ -32,30 +35,81 @@
         return typeof obj === 'function';
     }
 
-    var PENDING = 0,
-        FULFILLED = 1,
-        REJECTED = 2;
+    function handleCallback(self) {
+        // 兼容浏览器版本，没有微任务，执行时间节点不准确
+        clearTimeout(self._timer);
+        self._timer = setTimeout(function () {
+            if (self._callbacks.length > 0) {
+                if (self._status === FULFILLED) {
+                    // 兼容浏览器版本，没有微任务，执行时间节点不准确
+                    handleCallback(self);
+                    for (var i = 0; i < self._callbacks.length; i++) {
+                        var item = self._callbacks[i];
+                        if (item.type === TYPE_THEN) {
+                            item.handler(self._value);
+                        } else if (item.type === TYPE_FINALLY) {
+                            item.handler();
+                        }
+                    }
+                } else if (self._status === REJECTED) {
+                    // var isCaughtError = false;
+                    for (var i = 0; i < self._callbacks.length; i++) {
+                        var item = self._callbacks[i];
+                        if (item.type === TYPE_CATCH) {
+                            item.handler(self._reason);
 
-    var Promise = function (resolver) {
+                            if (item.isCaughtError) {
+                                isCaughtError = true;
+                            }
+
+                        } else if (item.type === TYPE_FINALLY) {
+                            item.handler();
+                        }
+                    }
+
+                    // if (!isCaughtError) {
+                    //     clearTimeout(self._timer);
+                    //     self._timer = setTimeout(function () {
+                    //         throw new Error('(in Promise) ' + self._reason);
+                    //     });
+                    // }
+                }
+                self._callbacks = [];
+            }
+        }, 0);
+    }
+
+    var PENDING = 'Pending',
+        FULFILLED = 'Fulfilled',
+        REJECTED = 'Rejected';
+
+    var TYPE_THEN = 1;
+    var TYPE_CATCH = 2;
+    var TYPE_FINALLY = 3;
+
+    var Promise = function Promise(resolver) {
         var self = this;
         this._status = PENDING;
         this._value;
         this._reason;
-        this._resolves = [];
-        this._rejects = [];
+        this._callbacks = [];
+        this._timer = null;
 
         var resolve = function (value) {
-            self._status = FULFILLED;
-            self._value = value;
-            for (var i = 0; i < self._resolves.length; i++) {
-                self._resolves[i](self._value);
+            if (self._status === PENDING) {
+                self._status = FULFILLED;
+                self._value = value;
+
+                handleCallback(self);
             }
         };
+
         var reject = function (reason) {
-            self._status = REJECTED;
-            self._reason = reason;
-            for (var i = 0; i < self._rejects.length; i++) {
-                self._rejects[i](self._reason);
+            if (self._status === PENDING) {
+                self._status = REJECTED;
+                self._reason = reason;
+
+                handleCallback(self);
             }
         };
 
@@ -109,8 +163,7 @@
 
     Promise.race = function (promises) {
         return new Promise(function (resolve, reject) {
-            var values = [],
-                i = 0,
+            var i = 0,
                 sign = 0,
                 len = promises.length,
                 p;
@@ -150,40 +203,68 @@
                         try {
                             // 成功函数执行报错，也会载入catch中
                             ret = onFulfilled(value);
+
+                            if (isThenable(ret)) {
+                                // 如果返回的也是一个Promise
+                                ret.then(function (value) {
+                                    resolve(value);
+                                }, function (reason) {
+                                    reject(reason);
+                                });
+                            } else {
+                                resolve(ret);
+                            }
                         } catch (e) {
                             reject(e);
-                            return;
                         }
-                    }
-                    if (isThenable(ret)) {
-                        ret.then(function (value) {
-                            resolve(value);
-                        }, function (reason) {
-                            reject(reason);
-                        });
                     } else {
                         resolve(ret);
                     }
                 }
 
                 function errback(reason) {
-                    var ret = isFunction(onRejected) ? onRejected(reason) : reason;
-                    reject(ret);
+                    try {
+                        if (isFunction(onRejected)) {
+                            reject(onRejected(reason));
+                        } else {
+                            reject(reason);
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
                 }
 
-                if (self._status === PENDING) {
-                    self._resolves.push(callback);
-                    self._rejects.push(errback);
-                } else if (self._status === FULFILLED) {
-                    callback(self._value);
-                } else if (self._status === REJECTED) {
-                    errback(self._reason);
+                self._callbacks.push({
+                    type: TYPE_THEN,
+                    handler: callback
+                });
+                self._callbacks.push({
+                    type: TYPE_CATCH,
+                    handler: errback,
+                    isCaughtError: isFunction(onRejected)
+                });
+
+                handleCallback(self);
+            });
+        },
+        'catch': function (onRejected) {
+            return this.then(null, onRejected);
+        },
+        'finally': function (onFinally) {
+            function finallyback() {
+                if (isFunction(onFinally)) {
+                    onFinally();
                 }
+            }
+
+            this._callbacks.push({
+                type: TYPE_FINALLY,
+                handler: finallyback,
             });
 
-        },
-        'catch': function (fn) {
-            return this.then(null, fn);
+            handleCallback(this);
+
+            return this;
         }
     };
 
